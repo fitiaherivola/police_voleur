@@ -54,7 +54,7 @@ Deux policiers ne peuvent pas occuper le même sommet, le voleur ne peut pas all
 
 - **Voleur** : cliquer sur le pion rouge, puis sur un cercle vert.
 - **Policiers** : cliquer sur un pion bleu, puis sur un cercle vert. Le déplacement est enregistré immédiatement et c'est au tour du voleur.
-- « Suggestion (Minimax) » propose un coup calculé par l'IA. « Recommencer » relance la partie.
+- « Suggestion (Minimax) » propose un coup calculé par l'IA. « Recommencer » relance la partie en cours ; « Rejouer » apparaît quand la partie est terminée pour en lancer une nouvelle.
 
 ## Architecture
 

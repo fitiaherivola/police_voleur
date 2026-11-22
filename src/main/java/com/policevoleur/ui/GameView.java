@@ -44,6 +44,7 @@ public final class GameView extends BorderPane {
     private final Label networkLabel = new Label();
     private final Button hintButton = new Button("Suggestion (Minimax)");
     private final Button restartButton = new Button("Recommencer");
+    private final Button replayButton = new Button("Rejouer");
     private final Button menuButton = new Button("Retour au menu");
     private final CheckBox labelsBox = new CheckBox("Afficher les numéros des sommets");
 
@@ -94,17 +95,14 @@ public final class GameView extends BorderPane {
         legend.getStyleClass().add("legend");
         legend.setWrapText(true);
 
-        for (Button b : new Button[] {hintButton, restartButton, menuButton}) {
+        for (Button b : new Button[] {hintButton, restartButton, replayButton, menuButton}) {
             b.setMaxWidth(Double.MAX_VALUE);
         }
         hintButton.getStyleClass().add("primary");
         hintButton.setOnAction(e -> requestHint());
-        restartButton.setOnAction(e -> {
-            String error = session.requestRestart();
-            if (error != null) {
-                setMessage(error);
-            }
-        });
+        restartButton.setOnAction(e -> restartGame());
+        replayButton.getStyleClass().add("primary");
+        replayButton.setOnAction(e -> restartGame());
         menuButton.setOnAction(e -> onMenu.run());
         labelsBox.setSelected(true);
         labelsBox.setOnAction(e -> board.setShowLabels(labelsBox.isSelected()));
@@ -113,7 +111,7 @@ public final class GameView extends BorderPane {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
         VBox side = new VBox(12, title, roleLabel, turnLabel, bannerLabel, messageLabel, networkLabel,
-                hintButton, restartButton, labelsBox, spacer, legend, menuButton);
+                hintButton, restartButton, replayButton, labelsBox, spacer, legend, menuButton);
         side.getStyleClass().add("side-panel");
         side.setPadding(new Insets(20));
         side.setPrefWidth(330);
@@ -196,6 +194,11 @@ public final class GameView extends BorderPane {
         bannerLabel.setVisible(state.isOver());
         bannerLabel.setManaged(state.isOver());
 
+        replayButton.setVisible(state.isOver());
+        replayButton.setManaged(state.isOver());
+        restartButton.setVisible(!state.isOver());
+        restartButton.setManaged(!state.isOver());
+
         boolean myTurn = !state.isOver() && session.controls(state.turn());
         hintButton.setDisable(!myTurn || hintRunning);
     }
@@ -229,6 +232,13 @@ public final class GameView extends BorderPane {
 
     private void setMessage(String text) {
         messageLabel.setText(text);
+    }
+
+    private void restartGame() {
+        String error = session.requestRestart();
+        if (error != null) {
+            setMessage(error);
+        }
     }
 
     // ------------------------------------------------------------------ souris
