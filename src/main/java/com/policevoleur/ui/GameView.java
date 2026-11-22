@@ -226,7 +226,13 @@ public final class GameView extends BorderPane {
             return new LinkedHashSet<>(engine.thiefMoves(state));
         }
         if (state.turn() == Role.POLICE && session.controls(Role.POLICE) && selectedPolice >= 0) {
-            return new LinkedHashSet<>(engine.policeTargets(state, selectedPolice));
+            Set<Integer> targets = new LinkedHashSet<>(engine.policeTargets(state, selectedPolice));
+            for (int i = 0; i < staged.length; i++) {
+                if (i != selectedPolice) {
+                    targets.remove(staged[i]);
+                }
+            }
+            return targets;
         }
         return Set.of();
     }
@@ -282,8 +288,10 @@ public final class GameView extends BorderPane {
             }
         }
         if (pawn >= 0) {
-            if (selectedPolice == pawn) {
+            if (staged[pawn] != state.policeAt(pawn)) {
                 staged[pawn] = state.policeAt(pawn);
+                setMessage("Déplacement du policier " + (pawn + 1) + " annulé.");
+            } else if (selectedPolice == pawn) {
                 selectedPolice = -1;
             } else {
                 selectedPolice = pawn;
@@ -291,14 +299,20 @@ public final class GameView extends BorderPane {
             refresh();
             return;
         }
-        if (selectedPolice >= 0 && engine.policeTargets(state, selectedPolice).contains(v)) {
+        boolean occupied = false;
+        for (int i = 0; i < staged.length; i++) {
+            if (i != selectedPolice && staged[i] == v) {
+                occupied = true;
+            }
+        }
+        if (selectedPolice >= 0 && !occupied && engine.policeTargets(state, selectedPolice).contains(v)) {
             staged[selectedPolice] = v;
             selectedPolice = -1;
             refresh();
             return;
         }
         selectedPolice = -1;
-        setMessage("Cliquez sur un policier, puis sur une case verte. Validez ensuite le tour.");
+        setMessage("Cliquez sur un policier, puis sur une case verte voisine. Validez ensuite le tour.");
         refresh();
     }
 
