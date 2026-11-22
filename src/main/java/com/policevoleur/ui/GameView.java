@@ -226,15 +226,19 @@ public final class GameView extends BorderPane {
             return new LinkedHashSet<>(engine.thiefMoves(state));
         }
         if (state.turn() == Role.POLICE && session.controls(Role.POLICE) && selectedPolice >= 0) {
-            Set<Integer> targets = new LinkedHashSet<>(engine.policeTargets(state, selectedPolice));
-            for (int i = 0; i < staged.length; i++) {
-                if (i != selectedPolice) {
-                    targets.remove(staged[i]);
-                }
-            }
-            return targets;
+            return availablePoliceTargets(engine, state, staged, selectedPolice);
         }
         return Set.of();
+    }
+
+    static Set<Integer> availablePoliceTargets(GameEngine engine, GameState state, int[] staged, int index) {
+        Set<Integer> targets = new LinkedHashSet<>(engine.policeTargets(state, index));
+        for (int i = 0; i < staged.length; i++) {
+            if (i != index) {
+                targets.remove(staged[i]);
+            }
+        }
+        return targets;
     }
 
     private void setMessage(String text) {
