@@ -40,14 +40,15 @@ Le bouton « Jouer en local » permet de tester seul, avec les deux camps sur le
 - Le voleur ne peut pas aller sur un sommet occupé par un policier.
 - Un seul policier se déplace par tour, puis le tour passe au voleur.
 - Les policiers peuvent aller partout, petit cercle et centre compris.
+- Un policier **capture** le voleur en allant sur sa case, sauf au tout premier tour de police (le départ n'est jamais une capture).
 - **Le voleur gagne** s'il revient précisément au sommet 0 après en être sorti, sans avoir été capturé.
-- **Les policiers gagnent** quand, après leur coup, le voleur n'a plus aucun déplacement possible.
+- **Les policiers gagnent** par capture ou quand, après leur coup, le voleur n'a plus aucun déplacement possible.
 
 ### Hypothèses retenues
 
 Un seul policier bouge par tour : les tours alternent **voleur → 1 policier → voleur → 1 policier…**. Le coup est appliqué dès que le pion et sa destination sont choisis, sans bouton de validation.
 
-Deux policiers ne peuvent pas occuper le même sommet, un policier ne peut pas aller sur la case du voleur (la victoire se fait par blocage), et il n'y a pas de limite de tours.
+Deux policiers ne peuvent pas occuper le même sommet, le voleur ne peut pas aller sur une case de policier, et il n'y a pas de limite de tours. Les deux camps avancent au même rythme (un pion par tour) : les policiers compensent leur nombre par la capture, le voleur par son objectif de retour au centre.
 
 ## Jouer à la souris
 

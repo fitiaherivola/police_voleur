@@ -9,12 +9,12 @@ import java.util.List;
  * Regles du jeu : validation des deplacements, application des coups, conditions de victoire.
  *
  * <ul>
- *   <li>Le voleur joue en premier ; les tours alternent voleur / policiers.</li>
+ *   <li>Le voleur joue en premier ; les tours alternent voleur / un policier.</li>
  *   <li>Le voleur doit se deplacer a chaque tour, vers un voisin non occupe par un policier.</li>
- *   <li>Un seul policier se deplace par tour, puis le tour passe au voleur.</li>
- *   <li>Un policier ne peut pas aller sur la case du voleur : la victoire se fait par blocage.</li>
+ *   <li>Un seul policier se deplace par tour, comme le voleur.</li>
+ *   <li>Un policier capture le voleur en allant sur sa case, sauf au tout premier tour de police.</li>
  *   <li>Le voleur gagne s'il revient au sommet 0 apres en etre sorti.</li>
- *   <li>Les policiers gagnent quand, apres leur coup, le voleur n'a plus aucun deplacement.</li>
+ *   <li>Les policiers gagnent par capture ou quand le voleur n'a plus aucun deplacement.</li>
  * </ul>
  */
 public final class GameEngine {
@@ -92,17 +92,27 @@ public final class GameEngine {
 
     // --------------------------------------------------------------- policiers
 
-    /** Sommets ou le policier numero index peut aller (voisins libres, sauf la case du voleur). */
+    /** Sommets ou le policier numero index peut aller (voisins libres, case du voleur si capture autorisee). */
     public List<Integer> policeTargets(GameState s, int index) {
         List<Integer> result = new ArrayList<>();
-        int from = s.policeAt(index);
-        for (int v : graph.neighbors(from)) {
-            if (v == s.thief() || s.isPoliceAt(v)) {
+        for (int v : graph.neighbors(s.policeAt(index))) {
+            if (v == s.thief()) {
+                if (captureAllowed(s)) {
+                    result.add(v);
+                }
+                continue;
+            }
+            if (s.isPoliceAt(v)) {
                 continue;
             }
             result.add(v);
         }
         return result;
+    }
+
+    /** Le depart n'est jamais une capture : le premier tour de police ne peut pas capturer. */
+    private static boolean captureAllowed(GameState s) {
+        return s.moves() >= 2;
     }
 
     /** Message d'erreur si le coup de police est interdit, null s'il est valide. */
@@ -138,8 +148,8 @@ public final class GameEngine {
         if (!graph.areAdjacent(from, to)) {
             return "Le policier " + (mover + 1) + " ne peut aller que sur un sommet directement relie au sien.";
         }
-        if (to == s.thief()) {
-            return "Un policier ne peut pas aller sur la case du voleur.";
+        if (to == s.thief() && !captureAllowed(s)) {
+            return "Le depart n'est jamais une capture.";
         }
         if (s.isPoliceAt(to)) {
             return "Ce sommet est occupe par un policier.";
@@ -147,7 +157,7 @@ public final class GameEngine {
         return null;
     }
 
-    /** Tous les coups de police valides : un seul policier se deplace (utilise par l'IA). */
+    /** Tous les coups de police valides : un seul policier bouge (utilise par l'IA). */
     public List<int[]> policeMoves(GameState s) {
         List<int[]> result = new ArrayList<>();
         if (s.isOver() || s.turn() != Role.POLICE) {
@@ -170,8 +180,17 @@ public final class GameEngine {
         if (error != null) {
             throw new IllegalArgumentException(error);
         }
-        GameState next = new GameState(s.thief(), dest, Role.THIEF, s.thiefLeftCenter(), Winner.NONE, s.moves() + 1);
-        if (thiefMoves(next).isEmpty()) {
+        int mover = -1;
+        for (int i = 0; i < dest.length; i++) {
+            if (dest[i] != s.policeAt(i)) {
+                mover = i;
+                break;
+            }
+        }
+        boolean capture = dest[mover] == s.thief();
+        GameState next = new GameState(capture ? dest[mover] : s.thief(), dest, Role.THIEF,
+                s.thiefLeftCenter(), Winner.NONE, s.moves() + 1);
+        if (capture || thiefMoves(next).isEmpty()) {
             return new GameState(next.thief(), dest, Role.THIEF, next.thiefLeftCenter(), Winner.POLICE, next.moves());
         }
         return next;

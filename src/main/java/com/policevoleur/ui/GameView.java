@@ -88,6 +88,7 @@ public final class GameView extends BorderPane {
 
         Label legend = new Label("Pions bleus 1, 2, 3 : policiers.  Pion rouge V : voleur.\n"
                 + "Un seul policier bouge par tour, puis c'est au voleur.\n"
+                + "Un policier capture le voleur en allant sur sa case (pas au 1er tour).\n"
                 + "Cercle orange pointillé : sommet 0, où le voleur doit revenir.\n"
                 + "Cercles verts : déplacements possibles.");
         legend.getStyleClass().add("legend");
@@ -166,7 +167,7 @@ public final class GameView extends BorderPane {
         if (s.isOver()) {
             setMessage(resultText(s));
         } else if (s.turn() == Role.POLICE) {
-            setMessage("Tour des policiers : cliquez sur un pion bleu, puis une case verte.");
+            setMessage("Tour des policiers : cliquez sur un pion bleu, puis une case verte (capture possible).");
         } else if (singleScreen) {
             setMessage("Au tour du voleur : cliquez sur le pion rouge, puis une case verte.");
         } else if (session.controls(s.turn())) {
@@ -202,7 +203,9 @@ public final class GameView extends BorderPane {
     private static String resultText(GameState s) {
         return switch (s.winner()) {
             case THIEF -> "Victoire du voleur : il est revenu au sommet 0 sans être capturé.";
-            case POLICE -> "Victoire des policiers : le voleur est bloqué, il n'a plus aucun déplacement.";
+            case POLICE -> s.isPoliceAt(s.thief())
+                    ? "Victoire des policiers : le voleur a été capturé."
+                    : "Victoire des policiers : le voleur est bloqué, il n'a plus aucun déplacement.";
             case NONE -> "";
         };
     }

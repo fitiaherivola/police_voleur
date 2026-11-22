@@ -61,7 +61,7 @@ class GameEngineTest {
         assertNull(engine.policeMoveError(s, new int[] {5, 2, 3}));
         assertNotNull(engine.policeMoveError(s, new int[] {1, 2, 3}), "un policier doit bouger");
         assertNotNull(engine.policeMoveError(s, new int[] {9, 2, 3}), "pas voisin");
-        assertNotNull(engine.policeMoveError(s, new int[] {1, 2, 4}), "pas sur le voleur");
+        assertNotNull(engine.policeMoveError(s, new int[] {1, 2, 4}), "capture interdite au 1er tour");
         assertNotNull(engine.policeMoveError(s, new int[] {5, 6, 3}), "un seul policier par tour");
         assertNotNull(engine.policeMoveError(s, new int[] {1, 1, 3}), "sommet deja occupe");
         assertNotNull(engine.policeMoveError(s, new int[] {5, 2}), "3 destinations");
@@ -69,10 +69,20 @@ class GameEngineTest {
     }
 
     @Test
-    void policeTargetsExcludeTheThiefAndOccupiedVertices() {
+    void policeTargetsExcludeTheThiefOnFirstTurnAndOccupiedVertices() {
         GameState s = engine.applyThiefMove(engine.initialState(), 4);
         assertEquals(List.of(0, 5), engine.policeTargets(s, 0));
         assertEquals(List.of(0, 6), engine.policeTargets(s, 1));
+    }
+
+    @Test
+    void policeCanCaptureAfterTheFirstTurn() {
+        GameState s = new GameState(4, new int[] {1, 2, 3}, Role.POLICE, true, Winner.NONE, 2);
+        assertNull(engine.policeMoveError(s, new int[] {1, 2, 4}));
+        assertTrue(engine.policeTargets(s, 2).contains(4));
+        GameState after = engine.applyPoliceMove(s, new int[] {1, 2, 4});
+        assertEquals(Winner.POLICE, after.winner());
+        assertTrue(after.isPoliceAt(after.thief()));
     }
 
     @Test
