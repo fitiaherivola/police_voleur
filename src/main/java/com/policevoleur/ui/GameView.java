@@ -170,10 +170,14 @@ public final class GameView extends BorderPane {
         hintVertex = -1;
         if (s.isOver()) {
             setMessage(resultText(s));
+        } else if (singleScreen && s.turn() == Role.POLICE) {
+            setMessage("Tour des policiers : déplacez jusqu'aux 3 pions bleus, puis validez.");
         } else if (singleScreen) {
-            setMessage("Au tour des " + s.turn().label().toLowerCase() + ".");
+            setMessage("Au tour du voleur : cliquez sur le pion rouge, puis une case verte.");
         } else if (session.controls(s.turn())) {
-            setMessage("C'est à vous de jouer.");
+            setMessage(s.turn() == Role.POLICE
+                    ? "Tour des policiers : préparez vos déplacements, puis validez."
+                    : "C'est à vous de jouer.");
         } else {
             setMessage("En attente de l'adversaire…");
         }
