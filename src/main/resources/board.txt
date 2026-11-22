@@ -1,0 +1,55 @@
+# Plateau Police et Voleur : graphe lu sur le dessin de reference.
+# Format : "vertices N" puis une ligne "edge A B" par arete (non orientee).
+#
+# 0          : centre (depart du voleur)
+# 1 2 3 4    : petit cercle (haut, droite, bas, gauche)
+# 5 6 7 8    : sommets sur les axes (haut, droite, bas, gauche)
+# 9..20      : grand cercle, sens horaire a partir du haut
+#              cardinaux : 9 haut, 12 droite, 15 bas, 18 gauche
+vertices 21
+
+# centre -> petit cercle
+edge 0 1
+edge 0 2
+edge 0 3
+edge 0 4
+
+# petit cercle
+edge 1 2
+edge 2 3
+edge 3 4
+edge 4 1
+
+# axes
+edge 1 5
+edge 5 9
+edge 2 6
+edge 6 12
+edge 3 7
+edge 7 15
+edge 4 8
+edge 8 18
+
+# courbes
+edge 20 5
+edge 5 10
+edge 11 6
+edge 6 13
+edge 16 7
+edge 7 14
+edge 17 8
+edge 8 19
+
+# grand cercle
+edge 9 10
+edge 10 11
+edge 11 12
+edge 12 13
+edge 13 14
+edge 14 15
+edge 15 16
+edge 16 17
+edge 17 18
+edge 18 19
+edge 19 20
+edge 20 9
