@@ -11,7 +11,7 @@ import java.util.List;
  * <ul>
  *   <li>Le voleur joue en premier ; les tours alternent voleur / policiers.</li>
  *   <li>Le voleur doit se deplacer a chaque tour, vers un voisin non occupe par un policier.</li>
- *   <li>Les 3 policiers se deplacent ensemble dans le meme tour (voir {@link GameRules}).</li>
+ *   <li>Un seul policier se deplace par tour, puis le tour passe au voleur.</li>
  *   <li>Un policier ne peut pas aller sur la case du voleur : la victoire se fait par blocage.</li>
  *   <li>Le voleur gagne s'il revient au sommet 0 apres en etre sorti.</li>
  *   <li>Les policiers gagnent quand, apres leur coup, le voleur n'a plus aucun deplacement.</li>
@@ -92,18 +92,20 @@ public final class GameEngine {
 
     // --------------------------------------------------------------- policiers
 
-    /** Sommets ou le policier numero index peut aller (voisins, sauf la case du voleur). */
+    /** Sommets ou le policier numero index peut aller (voisins libres, sauf la case du voleur). */
     public List<Integer> policeTargets(GameState s, int index) {
         List<Integer> result = new ArrayList<>();
-        for (int v : graph.neighbors(s.policeAt(index))) {
-            if (v != s.thief()) {
-                result.add(v);
+        int from = s.policeAt(index);
+        for (int v : graph.neighbors(from)) {
+            if (v == s.thief() || s.isPoliceAt(v)) {
+                continue;
             }
+            result.add(v);
         }
         return result;
     }
 
-    /** Message d'erreur si le tour des policiers est interdit, null s'il est valide. */
+    /** Message d'erreur si le coup de police est interdit, null s'il est valide. */
     public String policeMoveError(GameState s, int[] dest) {
         if (s.isOver()) {
             return "La partie est terminee.";
@@ -114,64 +116,49 @@ public final class GameEngine {
         if (dest == null || dest.length != GameState.POLICE_COUNT) {
             return "Il faut une destination pour chacun des " + GameState.POLICE_COUNT + " policiers.";
         }
-        int movers = 0;
+        int mover = -1;
         for (int i = 0; i < dest.length; i++) {
             int from = s.policeAt(i);
             int to = dest[i];
             if (to < 0 || to >= graph.vertexCount()) {
                 return "Sommet inexistant.";
             }
-            if (to == from) {
-                if (rules.policeMustAllMove()) {
-                    return "Chaque policier doit se deplacer.";
+            if (to != from) {
+                if (mover >= 0) {
+                    return "Un seul policier peut se deplacer par tour.";
                 }
-                continue;
+                mover = i;
             }
-            if (!graph.areAdjacent(from, to)) {
-                return "Le policier " + (i + 1) + " ne peut aller que sur un sommet directement relie au sien.";
-            }
-            if (to == s.thief()) {
-                return "Un policier ne peut pas aller sur la case du voleur.";
-            }
-            movers++;
         }
-        if (movers == 0) {
-            return "Au moins un policier doit se deplacer.";
+        if (mover < 0) {
+            return "Un policier doit se deplacer.";
         }
-        if (!rules.allowSharedVertex()) {
-            for (int i = 0; i < dest.length; i++) {
-                for (int j = i + 1; j < dest.length; j++) {
-                    if (dest[i] == dest[j]) {
-                        return "Deux policiers ne peuvent pas occuper le meme sommet.";
-                    }
-                }
-            }
+        int from = s.policeAt(mover);
+        int to = dest[mover];
+        if (!graph.areAdjacent(from, to)) {
+            return "Le policier " + (mover + 1) + " ne peut aller que sur un sommet directement relie au sien.";
+        }
+        if (to == s.thief()) {
+            return "Un policier ne peut pas aller sur la case du voleur.";
+        }
+        if (s.isPoliceAt(to)) {
+            return "Ce sommet est occupe par un policier.";
         }
         return null;
     }
 
-    /** Tous les tours de policiers valides (utilise par l'IA). */
+    /** Tous les coups de police valides : un seul policier se deplace (utilise par l'IA). */
     public List<int[]> policeMoves(GameState s) {
         List<int[]> result = new ArrayList<>();
         if (s.isOver() || s.turn() != Role.POLICE) {
             return result;
         }
-        List<List<Integer>> options = new ArrayList<>();
         for (int i = 0; i < GameState.POLICE_COUNT; i++) {
-            List<Integer> opts = new ArrayList<>();
-            if (!rules.policeMustAllMove()) {
-                opts.add(s.policeAt(i));
-            }
-            opts.addAll(policeTargets(s, i));
-            options.add(opts);
-        }
-        for (int a : options.get(0)) {
-            for (int b : options.get(1)) {
-                for (int c : options.get(2)) {
-                    int[] dest = {a, b, c};
-                    if (policeMoveError(s, dest) == null) {
-                        result.add(dest);
-                    }
+            for (int to : policeTargets(s, i)) {
+                int[] dest = s.policePositions();
+                dest[i] = to;
+                if (policeMoveError(s, dest) == null) {
+                    result.add(dest);
                 }
             }
         }

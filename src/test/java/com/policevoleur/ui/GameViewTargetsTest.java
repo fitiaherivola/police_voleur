@@ -16,11 +16,10 @@ class GameViewTargetsTest {
     private final GameEngine engine = new GameEngine(BoardLoader.loadDefault());
 
     @Test
-    void policeTargetsStayAdjacentToOriginalPositionAndSkipOccupiedVertices() {
+    void policeTargetsStayAdjacentToCurrentPositionAndSkipOccupiedVertices() {
         GameState s = engine.applyThiefMove(engine.initialState(), 4);
-        int[] staged = s.policePositions();
 
-        Set<Integer> targets = GameView.availablePoliceTargets(engine, s, staged, 0);
+        Set<Integer> targets = GameView.availablePoliceTargets(engine, s, 0);
 
         assertEquals(Set.of(0, 5), targets);
         assertTrue(targets.stream().allMatch(v -> engine.graph().areAdjacent(1, v)));
@@ -29,14 +28,15 @@ class GameViewTargetsTest {
     }
 
     @Test
-    void stagingAnotherPawnNeverCreatesAJumpTarget() {
-        GameState s = engine.applyThiefMove(engine.initialState(), 4);
-        int[] staged = {5, 2, 3};
+    void nextPoliceTurnUsesTheNewPositionsWithoutJumpTargets() {
+        GameState afterPolice = engine.applyPoliceMove(engine.applyThiefMove(engine.initialState(), 4),
+                new int[] {5, 2, 3});
+        GameState s = engine.applyThiefMove(afterPolice, 8);
 
-        Set<Integer> targets = GameView.availablePoliceTargets(engine, s, staged, 0);
+        Set<Integer> targets = GameView.availablePoliceTargets(engine, s, 1);
 
-        assertTrue(targets.stream().allMatch(v -> engine.graph().areAdjacent(1, v)));
+        assertEquals(Set.of(0, 1, 6), targets);
+        assertTrue(targets.stream().allMatch(v -> engine.graph().areAdjacent(2, v)));
         assertFalse(targets.contains(9));
-        assertFalse(targets.contains(6));
     }
 }

@@ -26,8 +26,8 @@ import java.util.Set;
  * Ecran de jeu : plateau a gauche, panneau d'information et boutons a droite.
  *
  * Voleur : cliquer sur le pion rouge, puis sur une case verte.
- * Policiers : cliquer sur un pion bleu, puis sur une case verte (pour chacun des 3 pions),
- * puis "Valider le tour". Recliquer sur un pion deja deplace annule son deplacement.
+ * Policiers : cliquer sur un pion bleu, puis sur une case verte : un seul policier bouge par tour
+ * et le coup est applique immediatement.
  */
 public final class GameView extends BorderPane {
 
@@ -42,15 +42,12 @@ public final class GameView extends BorderPane {
     private final Label bannerLabel = new Label();
     private final Label messageLabel = new Label();
     private final Label networkLabel = new Label();
-    private final Button validateButton = new Button("Valider le tour des policiers");
-    private final Button cancelButton = new Button("Annuler mes déplacements");
     private final Button hintButton = new Button("Suggestion (Minimax)");
     private final Button restartButton = new Button("Recommencer");
     private final Button menuButton = new Button("Retour au menu");
     private final CheckBox labelsBox = new CheckBox("Afficher les numéros des sommets");
 
     private GameState state;
-    private int[] staged;
     private int selectedPolice = -1;
     private boolean selectedThief;
     private int hintVertex = -1;
@@ -90,17 +87,16 @@ public final class GameView extends BorderPane {
         networkLabel.setWrapText(true);
 
         Label legend = new Label("Pions bleus 1, 2, 3 : policiers.  Pion rouge V : voleur.\n"
+                + "Un seul policier bouge par tour, puis c'est au voleur.\n"
                 + "Cercle orange pointillé : sommet 0, où le voleur doit revenir.\n"
                 + "Cercles verts : déplacements possibles.");
         legend.getStyleClass().add("legend");
         legend.setWrapText(true);
 
-        for (Button b : new Button[] {validateButton, cancelButton, hintButton, restartButton, menuButton}) {
+        for (Button b : new Button[] {hintButton, restartButton, menuButton}) {
             b.setMaxWidth(Double.MAX_VALUE);
         }
-        validateButton.getStyleClass().add("primary");
-        validateButton.setOnAction(e -> submitPolice());
-        cancelButton.setOnAction(e -> resetStaged());
+        hintButton.getStyleClass().add("primary");
         hintButton.setOnAction(e -> requestHint());
         restartButton.setOnAction(e -> {
             String error = session.requestRestart();
@@ -116,7 +112,7 @@ public final class GameView extends BorderPane {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
         VBox side = new VBox(12, title, roleLabel, turnLabel, bannerLabel, messageLabel, networkLabel,
-                validateButton, cancelButton, hintButton, restartButton, labelsBox, spacer, legend, menuButton);
+                hintButton, restartButton, labelsBox, spacer, legend, menuButton);
         side.getStyleClass().add("side-panel");
         side.setPadding(new Insets(20));
         side.setPrefWidth(330);
@@ -164,20 +160,17 @@ public final class GameView extends BorderPane {
 
     private void applyState(GameState s) {
         state = s;
-        staged = s.policePositions();
         selectedPolice = -1;
         selectedThief = false;
         hintVertex = -1;
         if (s.isOver()) {
             setMessage(resultText(s));
-        } else if (singleScreen && s.turn() == Role.POLICE) {
-            setMessage("Tour des policiers : déplacez jusqu'aux 3 pions bleus, puis validez.");
+        } else if (s.turn() == Role.POLICE) {
+            setMessage("Tour des policiers : cliquez sur un pion bleu, puis une case verte.");
         } else if (singleScreen) {
             setMessage("Au tour du voleur : cliquez sur le pion rouge, puis une case verte.");
         } else if (session.controls(s.turn())) {
-            setMessage(s.turn() == Role.POLICE
-                    ? "Tour des policiers : préparez vos déplacements, puis validez."
-                    : "C'est à vous de jouer.");
+            setMessage("C'est à vous de jouer.");
         } else {
             setMessage("En attente de l'adversaire…");
         }
@@ -186,7 +179,7 @@ public final class GameView extends BorderPane {
 
     private void refresh() {
         int pawn = selectedThief ? BoardCanvas.THIEF_PAWN : selectedPolice;
-        board.update(state, staged, pawn, currentTargets(), hintVertex);
+        board.update(state, state.policePositions(), pawn, currentTargets(), hintVertex);
 
         if (state.isOver()) {
             turnLabel.setText("Partie terminée");
@@ -203,14 +196,6 @@ public final class GameView extends BorderPane {
         bannerLabel.setManaged(state.isOver());
 
         boolean myTurn = !state.isOver() && session.controls(state.turn());
-        boolean policeTurn = myTurn && state.turn() == Role.POLICE;
-        boolean policeControl = session.controls(Role.POLICE);
-        validateButton.setVisible(policeControl);
-        validateButton.setManaged(policeControl);
-        cancelButton.setVisible(policeControl);
-        cancelButton.setManaged(policeControl);
-        validateButton.setDisable(!policeTurn);
-        cancelButton.setDisable(!policeTurn);
         hintButton.setDisable(!myTurn || hintRunning);
     }
 
@@ -230,19 +215,13 @@ public final class GameView extends BorderPane {
             return new LinkedHashSet<>(engine.thiefMoves(state));
         }
         if (state.turn() == Role.POLICE && session.controls(Role.POLICE) && selectedPolice >= 0) {
-            return availablePoliceTargets(engine, state, staged, selectedPolice);
+            return availablePoliceTargets(engine, state, selectedPolice);
         }
         return Set.of();
     }
 
-    static Set<Integer> availablePoliceTargets(GameEngine engine, GameState state, int[] staged, int index) {
-        Set<Integer> targets = new LinkedHashSet<>(engine.policeTargets(state, index));
-        for (int i = 0; i < staged.length; i++) {
-            if (i != index) {
-                targets.remove(staged[i]);
-            }
-        }
-        return targets;
+    static Set<Integer> availablePoliceTargets(GameEngine engine, GameState state, int index) {
+        return new LinkedHashSet<>(engine.policeTargets(state, index));
     }
 
     private void setMessage(String text) {
@@ -288,57 +267,32 @@ public final class GameView extends BorderPane {
     }
 
     private void clickPolice(int v) {
+        int[] positions = state.policePositions();
         int pawn = -1;
-        for (int i = 0; i < staged.length; i++) {
-            if (staged[i] == v) {
+        for (int i = 0; i < positions.length; i++) {
+            if (positions[i] == v) {
                 pawn = i;
                 break;
             }
         }
         if (pawn >= 0) {
-            if (staged[pawn] != state.policeAt(pawn)) {
-                staged[pawn] = state.policeAt(pawn);
-                setMessage("Déplacement du policier " + (pawn + 1) + " annulé.");
-            } else if (selectedPolice == pawn) {
-                selectedPolice = -1;
-            } else {
-                selectedPolice = pawn;
+            selectedPolice = selectedPolice == pawn ? -1 : pawn;
+            refresh();
+            return;
+        }
+        if (selectedPolice >= 0 && engine.policeTargets(state, selectedPolice).contains(v)) {
+            int[] dest = positions.clone();
+            dest[selectedPolice] = v;
+            String error = session.submitPoliceMove(dest);
+            selectedPolice = -1;
+            if (error != null) {
+                setMessage(error);
             }
             refresh();
             return;
         }
-        boolean occupied = false;
-        for (int i = 0; i < staged.length; i++) {
-            if (i != selectedPolice && staged[i] == v) {
-                occupied = true;
-            }
-        }
-        if (selectedPolice >= 0 && !occupied && engine.policeTargets(state, selectedPolice).contains(v)) {
-            staged[selectedPolice] = v;
-            selectedPolice = -1;
-            refresh();
-            return;
-        }
         selectedPolice = -1;
-        setMessage("Cliquez sur un policier, puis sur une case verte voisine. Validez ensuite le tour.");
-        refresh();
-    }
-
-    private void submitPolice() {
-        String error = session.submitPoliceMove(staged.clone());
-        if (error != null) {
-            setMessage(error);
-        } else {
-            selectedPolice = -1;
-        }
-        refresh();
-    }
-
-    private void resetStaged() {
-        staged = state.policePositions();
-        selectedPolice = -1;
-        hintVertex = -1;
-        setMessage("Déplacements annulés.");
+        setMessage("Cliquez sur un policier, puis sur une case verte voisine.");
         refresh();
     }
 
@@ -379,21 +333,19 @@ public final class GameView extends BorderPane {
             hintVertex = thiefMove;
             setMessage("Suggestion Minimax : allez au sommet " + thiefMove + " (entouré en jaune).");
         } else if (policeMove != null) {
-            staged = policeMove.clone();
-            selectedPolice = -1;
-            StringBuilder sb = new StringBuilder("Suggestion Minimax : ");
-            boolean first = true;
+            int mover = -1;
             for (int i = 0; i < policeMove.length; i++) {
                 if (policeMove[i] != state.policeAt(i)) {
-                    if (!first) {
-                        sb.append(", ");
-                    }
-                    sb.append("policier ").append(i + 1).append(" vers le sommet ").append(policeMove[i]);
-                    first = false;
+                    mover = i;
+                    break;
                 }
             }
-            sb.append(". Validez le tour ou modifiez-le.");
-            setMessage(sb.toString());
+            selectedPolice = mover;
+            hintVertex = mover >= 0 ? policeMove[mover] : -1;
+            setMessage(mover >= 0
+                    ? "Suggestion Minimax : policier " + (mover + 1) + " vers le sommet "
+                            + policeMove[mover] + " (entouré en jaune)."
+                    : "Aucune suggestion disponible.");
         } else {
             setMessage("Aucune suggestion disponible.");
         }

@@ -40,7 +40,7 @@ public final class GameAI {
         return index < 0 ? -1 : moves.get(index);
     }
 
-    /** Meilleur tour pour les 3 policiers (destinations), ou null s'ils ne peuvent pas jouer. */
+    /** Meilleur coup de police (un seul policier bouge), ou null s'ils ne peuvent pas jouer. */
     public int[] bestPoliceMove(GameState state, int depth) {
         if (state.isOver() || state.turn() != Role.POLICE) {
             return null;

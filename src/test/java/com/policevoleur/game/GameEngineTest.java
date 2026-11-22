@@ -59,34 +59,36 @@ class GameEngineTest {
     void policeValidation() {
         GameState s = engine.applyThiefMove(engine.initialState(), 4); // voleur en 4, policiers 1 2 3
         assertNull(engine.policeMoveError(s, new int[] {5, 2, 3}));
-        assertNotNull(engine.policeMoveError(s, new int[] {1, 2, 3}), "au moins un doit bouger");
+        assertNotNull(engine.policeMoveError(s, new int[] {1, 2, 3}), "un policier doit bouger");
         assertNotNull(engine.policeMoveError(s, new int[] {9, 2, 3}), "pas voisin");
         assertNotNull(engine.policeMoveError(s, new int[] {1, 2, 4}), "pas sur le voleur");
-        assertNotNull(engine.policeMoveError(s, new int[] {1, 1, 3}), "meme sommet interdit");
+        assertNotNull(engine.policeMoveError(s, new int[] {5, 6, 3}), "un seul policier par tour");
+        assertNotNull(engine.policeMoveError(s, new int[] {1, 1, 3}), "sommet deja occupe");
         assertNotNull(engine.policeMoveError(s, new int[] {5, 2}), "3 destinations");
         assertNotNull(engine.policeMoveError(s, null));
     }
 
     @Test
-    void sharedVertexCanBeAllowedByRules() {
-        GameEngine permissive = new GameEngine(BoardLoader.loadDefault(), new GameRules(false, true));
-        GameState s = permissive.applyThiefMove(permissive.initialState(), 4);
-        // policiers en 1, 2, 3 : les policiers 1 et 3 peuvent tous deux aller sur le centre
-        assertNull(permissive.policeMoveError(s, new int[] {0, 2, 0}));
-        assertNotNull(engine.policeMoveError(engine.applyThiefMove(engine.initialState(), 4), new int[] {0, 2, 0}));
+    void policeTargetsExcludeTheThiefAndOccupiedVertices() {
+        GameState s = engine.applyThiefMove(engine.initialState(), 4);
+        assertEquals(List.of(0, 5), engine.policeTargets(s, 0));
+        assertEquals(List.of(0, 6), engine.policeTargets(s, 1));
     }
 
     @Test
-    void policeMustAllMoveRuleForbidsStayingPut() {
-        GameEngine strict = new GameEngine(BoardLoader.loadDefault(), new GameRules(true, false));
-        GameState s = strict.applyThiefMove(strict.initialState(), 4);
-        assertNotNull(strict.policeMoveError(s, new int[] {5, 2, 3}));
-        for (int[] move : strict.policeMoves(s)) {
+    void everyPoliceMoveMovesExactlyOnePawnAndEndsTheTurn() {
+        GameState s = engine.applyThiefMove(engine.initialState(), 4);
+        assertFalse(engine.policeMoves(s).isEmpty());
+        for (int[] move : engine.policeMoves(s)) {
+            int movers = 0;
             for (int i = 0; i < 3; i++) {
-                assertTrue(move[i] != s.policeAt(i));
+                if (move[i] != s.policeAt(i)) {
+                    movers++;
+                }
             }
+            assertEquals(1, movers);
+            assertEquals(Role.THIEF, engine.applyPoliceMove(s, move).turn());
         }
-        assertFalse(strict.policeMoves(s).isEmpty());
     }
 
     @Test

@@ -38,26 +38,21 @@ Le bouton « Jouer en local » permet de tester seul, avec les deux camps sur le
 - Les déplacements se font uniquement vers un sommet directement relié, sans saut.
 - Le voleur joue en premier, puis les tours alternent. Le déplacement est obligatoire.
 - Le voleur ne peut pas aller sur un sommet occupé par un policier.
-- Les 3 policiers jouent d'un coup dans leur tour.
+- Un seul policier se déplace par tour, puis le tour passe au voleur.
 - Les policiers peuvent aller partout, petit cercle et centre compris.
 - **Le voleur gagne** s'il revient précisément au sommet 0 après en être sorti, sans avoir été capturé.
 - **Les policiers gagnent** quand, après leur coup, le voleur n'a plus aucun déplacement possible.
 
-### Hypothèses que le sujet ne tranchait pas
+### Hypothèses retenues
 
-Ces points sont réglables en un seul endroit, `GameRules` (`src/main/java/com/policevoleur/game/GameRules.java`) :
+Un seul policier bouge par tour : les tours alternent **voleur → 1 policier → voleur → 1 policier…**. Le coup est appliqué dès que le pion et sa destination sont choisis, sans bouton de validation.
 
-| Option | Valeur par défaut | Sens |
-|---|---|---|
-| `policeMustAllMove` | `false` | un policier peut rester sur place, mais au moins un doit bouger |
-| `allowSharedVertex` | `false` | deux policiers ne peuvent pas occuper le même sommet |
-
-Autres choix : un policier ne peut pas aller sur la case du voleur (la victoire se fait par blocage), et il n'y a pas de limite de tours.
+Deux policiers ne peuvent pas occuper le même sommet, un policier ne peut pas aller sur la case du voleur (la victoire se fait par blocage), et il n'y a pas de limite de tours.
 
 ## Jouer à la souris
 
 - **Voleur** : cliquer sur le pion rouge, puis sur un cercle vert.
-- **Policiers** : cliquer sur un pion bleu, puis sur un cercle vert, pour chacun des pions à déplacer. Puis « Valider le tour des policiers ». Recliquer sur un pion déjà déplacé annule son déplacement.
+- **Policiers** : cliquer sur un pion bleu, puis sur un cercle vert. Le déplacement est enregistré immédiatement et c'est au tour du voleur.
 - « Suggestion (Minimax) » propose un coup calculé par l'IA. « Recommencer » relance la partie.
 
 ## Architecture
